@@ -1,0 +1,70 @@
+{
+  "name": "market-vizium-desktop-app",
+  "version": "2.1.2",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev:vue": "cd frontend && npm run dev",
+    "dev:electron": "cross-env ELECTRON_DEV=true electron . --no-sandbox",
+    "build:vue": "cd frontend && npm run build",
+    "pack": "npm run build:vue && electron-builder --dir",
+    "dist:win": "npm run build:vue && electron-builder --win nsis",
+    "start": "npm run build:vue && electron . --no-sandbox",
+    "publish": "npm run build:vue && electron-builder --win --publish always"
+  },
+  "build": {
+    "appId": "com.marketvizium.desktop",
+    "productName": "Marviz",
+    "icon": "build/icon.ico",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "frontend/dist/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "artifactName": "Marviz-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://market-vizium.cloud/mvpu/updates/win"
+      }
+    ]
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "electron": "^30.0.0",
+    "electron-builder": "^26.15.3",
+    "electron-rebuild": "^3.2.9"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "axios": "^1.13.2",
+    "chart.js": "^4.5.1",
+    "electron-log": "^5.4.4",
+    "electron-store": "^8.2.0",
+    "electron-updater": "^6.8.9",
+    "escpos": "^3.0.0-alpha.6",
+    "escpos-usb": "^3.0.0-alpha.4",
+    "fast-xml-parser": "^5.8.0",
+    "https": "^1.0.0",
+    "jsonwebtoken": "^9.0.3",
+    "jwt-decode": "^4.0.0",
+    "maska": "^3.2.0",
+    "nvm": "^0.0.4",
+    "pinia-plugin-persistedstate": "^4.7.1",
+    "sqlite3": "^5.1.7",
+    "vue-chartjs": "^5.3.3",
+    "xlsx": "^0.18.5"
+  }
+}
