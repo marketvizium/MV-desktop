@@ -58,14 +58,16 @@
     <!-- TOP NAV BAR -->
     <div class="topbar">
       <div class="topbar-left">
-        <button class="back-btn" @click="$router.back()">
-          <span class="material-symbols-outlined">
-            list_alt_check
-          </span>
-        </button>
-        <div class="cotacao-identity">
-          <span class="cotacao-label">COTAÇÃO</span>
-          <span class="cotacao-name">{{ cabecalho?.nome_cotacao || nomeCotacao || '—' }}</span>
+        <div class="cotacao-back-nome">
+          <button class="back-btn" @click="$router.back()">
+            <span class="material-symbols-outlined">
+              list_alt_check
+            </span>
+          </button>
+          <div class="cotacao-identity">
+            <span class="cotacao-label">COTAÇÃO</span>
+            <span class="cotacao-name">{{ cabecalho?.nome_cotacao || nomeCotacao || '—' }}</span>
+          </div>
         </div>
         <div class="cotacao-meta" v-if="cabecalho">
           <span class="meta-id">#{{ cabecalho.id_cotacao }}</span>
@@ -78,36 +80,79 @@
 
       <div class="topbar-right">
 
-        <button  class="action-btn btn-export" v-if="cabecalho && auth.user.nivel != 7" @click="modalStatusVisivel = true" title="Exportar Excel">
-          <i class="pi pi-download"></i> Ver Tutorial
-        </button>
+        <div class="periodo-display" v-if="cabecalho">
+          <span class="material-symbols-outlined">calendar_month</span>
 
-        <div class="periodo-display" v-if="cabecalho ">
-          <i class="pi pi-calendar"></i>
-          <span>{{ formatarData(cabecalho.inicio_cotacao) }} → {{ formatarData(cabecalho.final_cotacao) }}</span>
+          <span>
+            {{ formatarData(cabecalho.inicio_cotacao) }}
+            →
+            {{ formatarData(cabecalho.final_cotacao) }}
+          </span>
         </div>
-
-        <!-- Botão Exportar -->
-        <button class="action-btn btn-export" @click="showExportModal = true" title="Exportar Excel">
-          <i class="pi pi-download"></i> Exportar
-        </button>
 
         <!-- ACTIONS baseadas no status -->
         <template v-if="cabecalho && auth.user.nivel != 7">
-          <button class="action-btn btn-outline" @click="abrirModalPeriodo" :disabled="estaConcluido">
-            <i class="pi pi-clock"></i> Período
+          <button
+            class="action-btn btn-outline btn-header"
+            @click="abrirModalPeriodo"
+            :disabled="estaConcluido"
+          >
+            <span class="material-symbols-outlined">schedule</span>
+            Período
           </button>
 
-          <button class="action-btn btn-primary" v-if="cabecalho.status_cotacao === 'fechada'" :disabled="loadingAcao" @click="abrirCotacao">
-            <i class="pi pi-lock-open"></i> Abrir Cotação
+          <button
+            class="action-btn btn-primary btn-header"
+            v-if="cabecalho.status_cotacao === 'fechada'"
+            :disabled="loadingAcao"
+            @click="abrirCotacao"
+          >
+            <span class="material-symbols-outlined">lock_open</span>
+            Abrir Cotação
           </button>
-          <button class="action-btn btn-info" v-if="cabecalho.status_cotacao === 'aberta'" :disabled="loadingAcao" @click="finalizarCotacao">
-            <i class="pi pi-check-circle"></i> Fechar Cotação
+
+          <button
+            class="action-btn btn-info btn-header"
+            v-if="cabecalho.status_cotacao === 'aberta'"
+            :disabled="loadingAcao"
+            @click="finalizarCotacao"
+          >
+            <span class="material-symbols-outlined">lock</span>
+            Fechar Cotação
           </button>
-          <button class="action-btn btn-success" v-if="cabecalho.status_cotacao === 'finalizada' && existePendente" :loading="loadingButtonConcluir" :disabled="loadingButtonConcluir" @click="concluirCotacao">
-            <i class="pi pi-flag"></i> Finalizar Cotação
+
+          <button
+            class="action-btn btn-success btn-header"
+            v-if="cabecalho.status_cotacao === 'finalizada' && existePendente"
+            :loading="loadingButtonConcluir"
+            :disabled="loadingButtonConcluir"
+            @click="concluirCotacao"
+          >
+            <span class="material-symbols-outlined">task_alt</span>
+            Finalizar Cotação
           </button>
         </template>
+
+        <!-- Botão Exportar -->
+        <button
+          class="action-btn btn-export btn-header"
+          @click="showExportModal = true"
+          title="Exportar Excel"
+        >
+          <span class="material-symbols-outlined">download</span>
+          Exportar
+        </button>
+
+        <button
+          class="action-btn btn-export btn-header"
+          v-if="cabecalho && auth.user.nivel != 7"
+          @click="modalStatusVisivel = true"
+          title="Ver Tutorial"
+        >
+          <span class="material-symbols-outlined">school</span>
+          Ver Tutorial
+        </button>
+        
       </div>
     </div>
 
@@ -193,15 +238,15 @@
                 <th>Cód. Barras</th>
                 <th>Qtd</th>
                 <th>Tipo </th>
-                <th>Custo</th>
-                <th>Últ. Preço</th>
-                <th>Últ. Qtd.</th>
+                <th class="detalhes-produto detalhes-produto-e">Custo</th>
+                <th class="detalhes-produto">Últ. Preço</th>
+                <th class="detalhes-produto">Últ. Qtd.</th>
                 <th v-if="cabecalho && cabecalho.status_cotacao !== 'fechada'">Ofertas</th>
                 <th>Ações</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="p in produtosFiltrados" :class="{'botaoAtivado-produto': (cabecalho && cabecalho.status_cotacao !== 'fechada'), 'produto-selecionado-auto': temOfertaSelecionada(p) && !estaConcluido && cabecalho}" @click="cabecalho && cabecalho.status_cotacao !== 'fechada' && !showHistoricoModal && !showEditarProdutoVerificar? abrirOfertasProduto(p) : null" :key="p.id_solicitado">
+              <tr v-for="p in produtosFiltrados" :class="{'botaoAtivado-produto': (cabecalho && cabecalho.status_cotacao !== 'fechada'), 'produto-selecionado-auto': temOfertaSelecionada(p) && !estaConcluido && cabecalho}" @click="cabecalho && cabecalho.status_cotacao !== 'fechada' && !showHistoricoModal && !showDetalhesProduto && !showEditarProdutoVerificar? abrirOfertasProduto(p) : null" :key="p.id_solicitado">
                 <td>
                   <div class="prod-cell">
                     <span class="prod-name">{{ p.nome }}</span>
@@ -215,9 +260,9 @@
                   <span v-if="p.qtd_unitaria_composicao" class="comp-info"> · {{ p.qtd_unitaria_composicao || "--" }}un</span>
                   <span class="muted" v-if="!p.tipo && !p.qtd_unitaria_composicao">—</span>
                 </td>
-                <td>R$ {{ formatVal(p.preco_custo) || "--" }}</td>
-                <td>R$ {{ formatVal(p.ultimo_preco) || "--" }}</td>
-                <td>{{ p.ultima_quantidade || "--" }}</td>
+                <td class="detalhes-produto detalhes-produto-e">R$ {{ formatVal(p.preco_custo) || "--" }}</td>
+                <td class="detalhes-produto">R$ {{ formatVal(p.ultimo_preco) || "--" }}</td>
+                <td class="detalhes-produto">{{ p.ultima_quantidade || "--" }}</td>
 
                 <!-- Coluna de ofertas: visível quando cotação não é fechada -->
                 <td v-if="cabecalho && cabecalho.status_cotacao !== 'fechada'">
@@ -251,7 +296,10 @@
                     >
                       <span class="material-symbols-outlined">delete</span>
                     </button>
-                    <button class="historico-btn" v-if="cabecalho && auth.usuario.nivel != 7" @click="abrirHistoricoProduto(p)">Histórico</button>
+                    <div class="historico-detalhe">
+                      <button class="historico-btn" v-if="cabecalho && auth.usuario.nivel != 7" @click="abrirHistoricoProduto(p)">Histórico</button>
+                      <button class="detalhes-btn" v-if="cabecalho && auth.usuario.nivel != 7" @click="abrirDetalhesProduto(p)">Detalhes</button>
+                    </div>
                     <span class="locked-hint" v-if="!podeEditarProduto && cabecalho?.status_cotacao === 'aberta'"><i class="pi pi-lock"></i></span>
                   </div>
                 </td>
@@ -1643,6 +1691,226 @@
       </div>
     </div>
 
+    <div class="modal-overlay" v-if="showDetalhesProduto" @click.self="fecharDetalhesProduto">
+      <div class="modal-box modal-box-detalhes">
+        <div class="modal-header">
+          <span>
+            <span class="material-symbols-outlined header-icon">inventory_2</span>
+            Detalhes do produto
+          </span>
+          <button class="modal-close" @click="fecharDetalhesProduto">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body modal-body-detalhes" v-if="produtoDetalhes">
+
+          <!-- Título do produto em destaque -->
+          <div class="produto-titulo-card">
+            <div class="produto-titulo-icon">
+              <span class="material-symbols-outlined">shopping_bag</span>
+            </div>
+            <div class="produto-titulo-info">
+              <h3>{{ produtoDetalhes.nome || 'Produto sem nome' }}</h3>
+              <span class="produto-codigo">
+                <span class="material-symbols-outlined mini-icon">barcode</span>
+                {{ produtoDetalhes.codigo_barra || 'Sem código de barras' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Seção: Dados do produto -->
+          <div class="secao-detalhes">
+            <div class="secao-titulo">
+              <span class="material-symbols-outlined">sell</span>
+              Dados do produto
+            </div>
+            <div class="grid-detalhes">
+              <div class="detalhe-item">
+                <span class="material-symbols-outlined detalhe-icon">tag</span>
+                <div class="detalhe-texto">
+                  <span class="detalhe-label">ID do produto</span>
+                  <span class="detalhe-valor">{{ produtoDetalhes.id_produto ?? '—' }}</span>
+                </div>
+              </div>
+              <div class="detalhe-item">
+                <span class="material-symbols-outlined detalhe-icon">category</span>
+                <div class="detalhe-texto">
+                  <span class="detalhe-label">Categoria</span>
+                  <span class="detalhe-valor">{{ produtoDetalhes.categoria || '—' }}</span>
+                </div>
+              </div>
+              <div class="detalhe-item">
+                <span class="material-symbols-outlined detalhe-icon">style</span>
+                <div class="detalhe-texto">
+                  <span class="detalhe-label">Tipo</span>
+                  <span class="detalhe-valor">{{ produtoDetalhes.tipo || '—' }}</span>
+                </div>
+              </div>
+              <div class="detalhe-item">
+                <span class="material-symbols-outlined detalhe-icon">payments</span>
+                <div class="detalhe-texto">
+                  <span class="detalhe-label">Preço de custo</span>
+                  <span class="detalhe-valor">{{ formatarMoeda(produtoDetalhes.preco_custo) }}</span>
+                </div>
+              </div>
+              <div class="detalhe-item">
+                <span class="material-symbols-outlined detalhe-icon">sell</span>
+                <div class="detalhe-texto">
+                  <span class="detalhe-label">Preço de venda</span>
+                  <span class="detalhe-valor">{{ formatarMoeda(produtoDetalhes.preco_venda) }}</span>
+                </div>
+              </div>
+              <div class="detalhe-item">
+                <span class="material-symbols-outlined detalhe-icon">percent</span>
+                <div class="detalhe-texto">
+                  <span class="detalhe-label">Margem</span>
+                  <span class="detalhe-valor">{{ formatarPercentual(produtoDetalhes.margem) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Seção: Dados da solicitação -->
+          <div class="secao-detalhes">
+            <div class="secao-titulo">
+              <span class="material-symbols-outlined">request_quote</span>
+              Dados da solicitação
+            </div>
+            <div class="grid-detalhes">
+              <div class="detalhe-item">
+                <span class="material-symbols-outlined detalhe-icon">confirmation_number</span>
+                <div class="detalhe-texto">
+                  <span class="detalhe-label">ID solicitado</span>
+                  <span class="detalhe-valor">{{ produtoDetalhes.id_solicitado ?? '—' }}</span>
+                </div>
+              </div>
+              <div class="detalhe-item">
+                <span class="material-symbols-outlined detalhe-icon">description</span>
+                <div class="detalhe-texto">
+                  <span class="detalhe-label">ID cotação</span>
+                  <span class="detalhe-valor">{{ produtoDetalhes.id_cotacao ?? '—' }}</span>
+                </div>
+              </div>
+              <div class="detalhe-item">
+                <span class="material-symbols-outlined detalhe-icon">inventory</span>
+                <div class="detalhe-texto">
+                  <span class="detalhe-label">Quantidade</span>
+                  <span class="detalhe-valor">{{ produtoDetalhes.quantidade ?? '—' }}</span>
+                </div>
+              </div>
+              <div class="detalhe-item">
+                <span class="material-symbols-outlined detalhe-icon">layers</span>
+                <div class="detalhe-texto">
+                  <span class="detalhe-label">Qtd. unitária composição</span>
+                  <span class="detalhe-valor">{{ produtoDetalhes.qtd_unitaria_composicao ?? '—' }}</span>
+                </div>
+              </div>
+              <div class="detalhe-item">
+                <span class="material-symbols-outlined detalhe-icon">event</span>
+                <div class="detalhe-texto">
+                  <span class="detalhe-label">Adicionado em</span>
+                  <span class="detalhe-valor">{{ formatarData(produtoDetalhes.adicionado_em) }}</span>
+                </div>
+              </div>
+              <div class="detalhe-item">
+                <span class="material-symbols-outlined detalhe-icon">task_alt</span>
+                <div class="detalhe-texto">
+                  <span class="detalhe-label">Resultado do fechamento</span>
+                  <span class="detalhe-valor">{{ produtoDetalhes.resultado_fechamento || 'Pendente' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Seção: Usuário -->
+          <div class="secao-detalhes">
+            <div class="secao-titulo">
+              <span class="material-symbols-outlined">person</span>
+              Usuário responsável
+            </div>
+            <div class="grid-detalhes">
+              <div class="detalhe-item">
+                <span class="material-symbols-outlined detalhe-icon">badge</span>
+                <div class="detalhe-texto">
+                  <span class="detalhe-label">Nome</span>
+                  <span class="detalhe-valor">{{ produtoDetalhes.nome_usuario || '—' }}</span>
+                </div>
+              </div>
+              <div class="detalhe-item">
+                <span class="material-symbols-outlined detalhe-icon">mail</span>
+                <div class="detalhe-texto">
+                  <span class="detalhe-label">E-mail</span>
+                  <span class="detalhe-valor detalhe-valor-quebra">{{ produtoDetalhes.email || '—' }}</span>
+                </div>
+              </div>
+              <div class="detalhe-item">
+                <span class="material-symbols-outlined detalhe-icon">fingerprint</span>
+                <div class="detalhe-texto">
+                  <span class="detalhe-label">ID usuário</span>
+                  <span class="detalhe-valor">{{ produtoDetalhes.id_usuario ?? '—' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Seção: Última compra (destaque) -->
+          <div class="secao-detalhes secao-destaque">
+            <div class="secao-titulo">
+              <span class="material-symbols-outlined">history</span>
+              Última compra
+            </div>
+            <div class="grid-detalhes">
+              <div class="detalhe-item">
+                <span class="material-symbols-outlined detalhe-icon">storefront</span>
+                <div class="detalhe-texto">
+                  <span class="detalhe-label">Origem</span>
+                  <span class="detalhe-valor">
+                    <span class="badge-origem" :class="produtoDetalhes.origem_ultima_compra === 'cotacao' ? 'badge-cotacao' : 'badge-pedido'">
+                      {{ origemFormatada(produtoDetalhes.origem_ultima_compra) }}
+                    </span>
+                  </span>
+                </div>
+              </div>
+              <div class="detalhe-item">
+                <span class="material-symbols-outlined detalhe-icon">calendar_month</span>
+                <div class="detalhe-texto">
+                  <span class="detalhe-label">Data da última compra</span>
+                  <span class="detalhe-valor">{{ formatarData(produtoDetalhes.data_ultima_compra) }}</span>
+                </div>
+              </div>
+              <div class="detalhe-item">
+                <span class="material-symbols-outlined detalhe-icon">attach_money</span>
+                <div class="detalhe-texto">
+                  <span class="detalhe-label">Último preço</span>
+                  <span class="detalhe-valor">{{ formatarMoeda(produtoDetalhes.ultimo_preco) }}</span>
+                </div>
+              </div>
+              <div class="detalhe-item">
+                <span class="material-symbols-outlined detalhe-icon">production_quantity_limits</span>
+                <div class="detalhe-texto">
+                  <span class="detalhe-label">Última quantidade</span>
+                  <span class="detalhe-valor">{{ produtoDetalhes.ultima_quantidade ?? '—' }}</span>
+                </div>
+              </div>
+              <div class="detalhe-item">
+                <span class="material-symbols-outlined detalhe-icon">category</span>
+                <div class="detalhe-texto">
+                  <span class="detalhe-label">Último tipo</span>
+                  <span class="detalhe-valor">{{ produtoDetalhes.ultimo_tipo || '—' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button class="action-btn btn-outline" @click="fecharDetalhesProduto">Fechar</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -1763,6 +2031,9 @@ export default {
       loadingEdit: false,
       loadingAdd: false,
       loadingAutoSelect: false,
+
+      showDetalhesProduto: false,
+      produtoDetalhes: null,
 
       // search
       searchProdutos: '',
@@ -2070,6 +2341,50 @@ export default {
       if (!oculto) {
         this.modalStatusVisivel = true;
       }
+    },
+
+
+    fecharDetalhesProduto(){
+      this.showDetalhesProduto = false
+      this.produtoDetalhes     = null
+    },
+
+    abrirDetalhesProduto(produto){
+      this.produtoDetalhes = produto
+      this.showDetalhesProduto = true
+      this.showOfertasProdutoModal = false
+    },
+
+    formatarData(timestamp) {
+      if (!timestamp) return '—'
+      const data = new Date(Number(timestamp))
+      if (isNaN(data.getTime())) return '—'
+      return data.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    },
+
+    formatarMoeda(valor) {
+      if (valor === null || valor === undefined || valor === '') return '—'
+      return Number(valor).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      })
+    },
+
+    formatarPercentual(valor) {
+      if (valor === null || valor === undefined || valor === '') return '—'
+      return `${Number(valor).toLocaleString('pt-BR')}%`
+    },
+
+    origemFormatada(origem) {
+      if (origem === 'cotacao') return 'Cotação'
+      if (origem === 'pedido_direto') return 'Pedido direto'
+      return '—'
     },
 
 
@@ -3499,6 +3814,7 @@ export default {
   font-size: 12px; color: #000;
   background: rgba(0,0,0,0.05);
   padding: 5px 12px; border-radius: 7px;
+  height: 42px;
 }
 
 /* ===== ACTION BUTTONS ===== */
@@ -4404,25 +4720,55 @@ export default {
   display: block;
 }
 
-
 .historico-btn{
-  border: 1px solid #ff8049;
-  color: #c5460f;
+  border: none;
+  background-color: #ff8049;
+  color: #FFF;
   font-family: 'Poppins';
-  background-color: #fff;
   font-weight: 500;
+  height: 40px;
+  border-radius: 10px;
+  width: 100px;
 }
 
-
 .historico-btn:hover{
-  border: 1px solid #ff8049;
-  color: #c5460f;
+  border: none;
+  background-color: #c56034;
+  color: #FFF;
+  width: 100px;
   font-family: 'Poppins';
-  background-color: #e7e7e7;
   font-weight: 500;
   cursor: pointer;
   transition: 0.5s;
+  height: 40px;
+  border-radius: 10px;
 }
+
+
+.detalhes-btn{
+  border: none;
+  background-color: #ff8049;
+  color: #FFF;
+  font-family: 'Poppins';
+  font-weight: 500;
+  height: 40px;
+  border-radius: 10px;
+  width: 100px;
+}
+
+.detalhes-btn:hover{
+  border: none;
+  background-color: #c56034;
+  color: #FFF;
+  width: 100px;
+  font-family: 'Poppins';
+  font-weight: 500;
+  cursor: pointer;
+  transition: 0.5s;
+  height: 40px;
+  border-radius: 10px;
+}
+
 
 .hist-context-card {
   display: flex; align-items: center; gap: 10px;
@@ -4774,5 +5120,324 @@ video {
 :deep(.p-component-overlay) {
   z-index: 9999 !important;
 }
+
+@media(max-width: 1340px){
+  .topbar{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: start;
+  }
+
+  .topbar-left{
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .topbar-right{
+    display: flex;
+    width: 100%;
+  }
+
+  .btn-header{
+    width: 100%;
+    height: 40px;
+  }
+
+  .periodo-display{
+    min-width: 210px;
+  }
+}
+
+.historico-detalhe{
+  display: flex;
+  gap: 15px;
+}
+
+@media(max-width: 1190px){
+  .detalhes-produto-e{
+    display: none;
+  }
+
+  .historico-detalhe{
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+}
+
+@media(max-width: 1080px){
+  .topbar{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: start;
+  }
+
+  .topbar-left{
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .topbar-right{
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+    width: 100%;
+  }
+
+  .btn-header{
+    width: 100%;
+    height: 40px;
+  }
+
+  .cotacao-back-nome{
+    gap: 10px;
+  }
+
+  .detalhes-produto{
+    display: none;
+  }
+}
+
+.modal-box-detalhes {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 720px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+
+/* ===== Corpo do modal, com scroll interno ===== */
+.modal-body-detalhes {
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ===== Card de título do produto ===== */
+.produto-titulo-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #FF8049;
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 22px;
+}
+
+.produto-titulo-icon {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.produto-titulo-icon .material-symbols-outlined {
+  font-size: 26px;
+  color: #ffffff;
+}
+
+.produto-titulo-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.produto-titulo-info h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #ffffff;
+  word-break: break-word;
+}
+
+.produto-codigo {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.mini-icon {
+  font-size: 16px;
+}
+
+/* ===== Seções ===== */
+.secao-detalhes {
+  margin-bottom: 22px;
+}
+
+.secao-detalhes:last-child {
+  margin-bottom: 4px;
+}
+
+.secao-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #FF8049;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #FFE7DA;
+}
+
+.secao-titulo .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.secao-destaque {
+  background: #FFF6F1;
+  border: 1px solid #FFD9C4;
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.secao-destaque .secao-titulo {
+  border-bottom-color: #FFD9C4;
+}
+
+/* ===== Grid de itens ===== */
+.grid-detalhes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.detalhe-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #fafafa;
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-width: 0;
+}
+
+.secao-destaque .detalhe-item {
+  background: #ffffff;
+}
+
+.detalhe-icon {
+  font-size: 20px;
+  color: #FF8049;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.detalhe-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.detalhe-label {
+  font-size: 12.5px;
+  color: #777777;
+  font-weight: 500;
+}
+
+.detalhe-valor {
+  font-size: 15px;
+  color: #1a1a1a;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.detalhe-valor-quebra {
+  word-break: break-all;
+}
+
+/* ===== Badge de origem ===== */
+.badge-origem {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.badge-cotacao {
+  background: #FFE7DA;
+  color: #B84F1F;
+}
+
+.badge-pedido {
+  background: #E8E8E8;
+  color: #1a1a1a;
+}
+
+.modal-box-detalhes {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 720px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+
+/* ===== Header ===== */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #eeeeee;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a1a;
+  flex-shrink: 0;
+}
+
+.modal-header span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-icon {
+  color: #FF8049;
+  font-size: 22px;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  transition: background 0.2s ease;
+}
+
+.modal-close:hover {
+  background: #f5f5f5;
+}
+
 
 </style>

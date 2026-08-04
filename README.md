@@ -324,3 +324,9 @@ npx cap open android - abrir android studio
  - Estou alterando continuamente o console de cotação, antigamente a consulta para encontrar um produto era somente por cod barra, agr é por descrição do produto, com um motor de rankeamento de busca otimizado no banco. 
  - Alterei a forma como visualiza ofertass, não existe mais essa aba, agr é somente produtos ou verificar pedido. Em produtos vc consegue ver as ofertas específicas daquele produto e em verificar pedido vc vê o que cada vendedor ganhou na cotação. 
  - Além dessas houveram alterações pontuais na interface
+
+ # V1010 - Adicionando modal de detalhes e melhorando a responsividade da tela de cotação. 
+
+ - Eu estava sem liberdade e com uma grande limitação ao exibir os dados do produto, principalmente pq na tabela não cabe tudo o que eu preciso. Adicionei um modal de detalhes para o usuário conseguir ver mais dados sobre o produto, como origem da última compra, data da ultima compra, etc... 
+
+ - Preciso replicar essas alterações de cotações, e deixar uma tela mais funcional na aplicação web, bem como replicar a estrutura visual em pedido direto, pra ficar o mesmo padrão e ajudar o usuário.
