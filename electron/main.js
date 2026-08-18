@@ -365,7 +365,7 @@ function createWindow () {
     icon: path.join(__dirname, '../build/icon.ico'),
 
     frame: false,
-    //devTools: false, //habilitar prod
+    devTools: false, //habilitar prod
 
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),

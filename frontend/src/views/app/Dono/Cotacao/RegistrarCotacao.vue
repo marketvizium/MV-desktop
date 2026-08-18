@@ -44,14 +44,108 @@
       </div>
     </div>
 
-    <!-- SWITCH: Itens não respondidos -->
+    <!-- LINHA 3: Observação -->
+    <div style="width: 100%; margin-top: 20px; flex-shrink: 0;">
+      <div class="obs-header">
+        <label class="obs-label">Observação (opcional)</label>
+        <span class="obs-contador" :class="{ limite: (cotacao.observacao || '').length >= 255 }">
+          {{ (cotacao.observacao || '').length }}/255
+        </span>
+      </div>
+      <textarea
+        v-model="cotacao.observacao"
+        maxlength="255"
+        rows="2"
+        class="obs-textarea"
+        placeholder="Deixe uma observação para os vendedores sobre esta cotação..."
+      />
+    </div>
+
+    <!-- LINHA 4: Condição de pagamento (boletos) -->
+    <div style="width: 100%; margin-top: 20px; flex-shrink: 0;">
+      <label class="obs-label" style="margin-bottom: 8px; display: block;">Condição de pagamento (opcional)</label>
+      <button type="button" class="condicao-btn" @click="abrirModalBoletos">
+        <div class="condicao-btn-info">
+          <span class="material-symbols-outlined condicao-btn-icon">receipt_long</span>
+          <span class="condicao-btn-texto" :class="{ vazio: !cotacao.prazo_boleto }">
+            {{ resumoCondicaoPagamento }}
+          </span>
+        </div>
+        <span class="material-symbols-outlined condicao-btn-seta">chevron_right</span>
+      </button>
+    </div>
+
+    <!-- MODAL: Condição de pagamento -->
+    <transition name="fade">
+      <div v-if="modalBoletoAberto" class="boleto-modal-overlay" @click.self="fecharModalBoletos">
+        <div class="boleto-modal">
+          <div class="boleto-modal-header">
+            <h3>Condição de pagamento</h3>
+            <button type="button" class="boleto-modal-close" @click="fecharModalBoletos">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <div class="boleto-modal-body">
+            <!-- Passo 1: quantidade de boletos -->
+            <p class="boleto-step-title">1. Quantos boletos?</p>
+            <div class="qtd-boletos-group">
+              <button
+                v-for="qtd in [1, 2, 3]"
+                :key="qtd"
+                type="button"
+                class="qtd-boleto-btn"
+                :class="{ active: qtdBoletosTemp === qtd }"
+                @click="selecionarQtdBoletos(qtd)"
+              >
+                {{ qtd }} {{ qtd === 1 ? 'boleto' : 'boletos' }}
+              </button>
+            </div>
+
+            <!-- Passo 2: prazo (combinação já pronta) -->
+            <div v-if="qtdBoletosTemp">
+              <p class="boleto-step-title">2. Selecione o prazo</p>
+              <div class="prazo-radio-list">
+                <div
+                  v-for="opcao in opcoesPrazoAtual"
+                  :key="opcao"
+                  class="prazo-radio-item"
+                  @click="selecionarPrazo(opcao)"
+                >
+                  <span>{{ opcao }} dias</span>
+                  <span class="radio-circle" :class="{ checked: prazoSelecionadoTemp === opcao }" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="boleto-modal-footer">
+            <p class="boleto-resumo">{{ resumoModal }}</p>
+            <div class="boleto-modal-actions">
+              <button type="button" class="boleto-btn-cancelar" @click="fecharModalBoletos">
+                Cancelar
+              </button>
+              <button
+                type="button"
+                class="boleto-btn-confirmar"
+                :disabled="!qtdBoletosTemp || !prazoSelecionadoTemp"
+                @click="confirmarCondicaoPagamento"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
+
     <div class="switch-row" style="margin-top: 24px; flex-shrink: 0;">
       <div class="switch-wrapper" @click="adicionarItensNaoRespondidos = !adicionarItensNaoRespondidos">
         <div class="switch-track" :class="{ active: adicionarItensNaoRespondidos }">
           <div class="switch-thumb" :class="{ active: adicionarItensNaoRespondidos }" />
         </div>
         <span class="switch-label">
-          Adicionar produtos não respondidos de cotações anteriores (últimos 30 dias)
+          Adicionar produtos não respondido da cotação anteror
         </span>
       </div>
     </div>
@@ -194,11 +288,19 @@ export default {
       auth: null,
 
       cotacao: {
-        nome_cotacao: null
+        nome_cotacao: null,
+        observacao: '',
+        qtd_boletos: null,
+        prazo_boleto: null
       },
 
       inicioCotacaoDate: null,
       fimCotacaoDate: null,
+
+      // Modal condição de pagamento (boletos)
+      modalBoletoAberto: false,
+      qtdBoletosTemp: null,
+      prazoSelecionadoTemp: null,
 
       // Flag itens não respondidos
       adicionarItensNaoRespondidos: false,
@@ -238,6 +340,52 @@ export default {
     todosSelecionados () {
       if (this.vendedoresFiltrados.length === 0) return false
       return this.vendedoresFiltrados.every(v => this.vendedoresSelecionados.includes(v.id_vendedor))
+    },
+
+    // Bases de prazo (múltiplos de 7) usadas para montar as combinações, até ~80 dias
+    basesPrazo () {
+      const bases = []
+      for (let dias = 7; dias <= 70; dias += 7) {
+        bases.push(dias)
+      }
+      return bases
+    },
+
+    // Combinações prontas de prazo para a quantidade de boletos escolhida no modal
+    // Ex.: 1 boleto → ['7', '14', '21', ...] | 2 boletos → ['7/14', '14/21', '21/28', ...]
+    opcoesPrazoAtual () {
+      if (!this.qtdBoletosTemp) return []
+      return this.basesPrazo.map(base => {
+        const combinacao = []
+        for (let i = 0; i < this.qtdBoletosTemp; i++) {
+          combinacao.push(base + (i * 7))
+        }
+        return combinacao.join('/')
+      })
+    },
+
+    // Texto exibido no botão da tela principal
+    resumoCondicaoPagamento () {
+      if (!this.cotacao.qtd_boletos || !this.cotacao.prazo_boleto) {
+        return 'Selecionar condição de pagamento'
+      }
+      const qtd = this.cotacao.qtd_boletos
+      const label = qtd === 1 ? 'boleto' : 'boletos'
+      return `${qtd} ${label} • ${this.cotacao.prazo_boleto.split('/').join('/')} dias`
+    },
+
+    // Texto exibido no rodapé do modal enquanto o usuário seleciona
+    resumoModal () {
+      if (!this.qtdBoletosTemp) {
+        return 'Selecione a quantidade de boletos para começar.'
+      }
+      if (!this.prazoSelecionadoTemp) {
+        return 'Selecione o prazo desejado.'
+      }
+      const qtd = this.qtdBoletosTemp
+      const label = qtd === 1 ? 'boleto' : 'boletos'
+      const dias = this.prazoSelecionadoTemp.split('/').join(' e ')
+      return `Condição de pagamento: ${qtd} ${label} — ${dias} dias`
     }
   },
 
@@ -279,14 +427,49 @@ export default {
       }
     },
 
+    abrirModalBoletos () {
+      // Pré-carrega o modal com a condição já salva, se houver
+      this.qtdBoletosTemp        = this.cotacao.qtd_boletos || null
+      this.prazoSelecionadoTemp  = this.cotacao.prazo_boleto || null
+      this.modalBoletoAberto = true
+    },
+
+    fecharModalBoletos () {
+      this.modalBoletoAberto = false
+    },
+
+    selecionarQtdBoletos (qtd) {
+      this.qtdBoletosTemp = qtd
+      // Ao trocar a quantidade, a combinação anterior não é mais válida
+      this.prazoSelecionadoTemp = null
+    },
+
+    selecionarPrazo (opcao) {
+      this.prazoSelecionadoTemp = opcao
+    },
+
+    confirmarCondicaoPagamento () {
+      if (!this.qtdBoletosTemp || !this.prazoSelecionadoTemp) return
+
+      this.cotacao.qtd_boletos  = this.qtdBoletosTemp
+      this.cotacao.prazo_boleto = this.prazoSelecionadoTemp
+
+      this.modalBoletoAberto = false
+    },
+
     limparTudo () {
       this.cotacao.nome_cotacao         = null
+      this.cotacao.observacao           = ''
+      this.cotacao.qtd_boletos          = null
+      this.cotacao.prazo_boleto         = null
       this.inicioCotacaoDate            = null
       this.fimCotacaoDate               = null
       this.adicionarItensNaoRespondidos = false
       this.vendedoresSelecionados       = []
       this.busca                        = ''
       this.paginaAtual                  = 1
+      this.qtdBoletosTemp               = null
+      this.prazoSelecionadoTemp         = null
     },
 
     async carregarVendedores () {
@@ -332,6 +515,9 @@ export default {
 
         const payload = {
           nome_cotacao:                this.cotacao.nome_cotacao,
+          observacao:                  this.cotacao.observacao || null,
+          qtd_boletos:                 this.cotacao.qtd_boletos || null,
+          prazo_boleto:                this.cotacao.prazo_boleto || null,
           inicio_cotacao:              new Date(this.inicioCotacaoDate).getTime(),
           final_cotacao:               new Date(this.fimCotacaoDate).getTime(),
           adicionarItensNaoRespondidos: this.adicionarItensNaoRespondidos,
@@ -693,6 +879,331 @@ export default {
   font-family: 'Poppins', sans-serif;
   min-width: 50px;
   text-align: center;
+}
+
+/* ===== OBSERVAÇÃO ===== */
+.obs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.obs-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #444;
+  font-family: 'Poppins', sans-serif;
+}
+
+.obs-contador {
+  font-size: 12px;
+  color: #aaa;
+  font-family: 'Poppins', sans-serif;
+}
+
+.obs-contador.limite {
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+.obs-textarea {
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 10px 12px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 16px;
+  color: #333;
+  resize: vertical;
+  min-height: 44px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.obs-textarea:focus {
+  border-color: #FF8049;
+}
+
+.obs-textarea::placeholder {
+  color: #777;
+}
+
+/* ===== CONDIÇÃO DE PAGAMENTO (botão) ===== */
+.condicao-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background: #fff;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.condicao-btn:hover {
+  border-color: #FF8049;
+  background: #fff8f5;
+}
+
+.condicao-btn-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.condicao-btn-icon {
+  color: #FF8049;
+  font-size: 20px;
+}
+
+.condicao-btn-texto {
+  font-size: 16px;
+  font-family: 'Poppins', sans-serif;
+  color: #333;
+  font-weight: 600;
+}
+
+.condicao-btn-texto.vazio {
+  color: #777;
+  font-weight: 400;
+}
+
+.condicao-btn-seta {
+  color: #bbb;
+  font-size: 20px;
+}
+
+/* ===== MODAL BOLETOS ===== */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.2s;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
+.boleto-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.boleto-modal {
+  width: 100%;
+  max-width: 420px;
+  max-height: 85vh;
+  background: #fff;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.boleto-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #eee;
+  flex-shrink: 0;
+}
+
+.boleto-modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  color: #222;
+}
+
+.boleto-modal-close {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #999;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+}
+
+.boleto-modal-close:hover {
+  color: #555;
+}
+
+.boleto-modal-body {
+  padding: 18px 20px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.boleto-step-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #444;
+  font-family: 'Poppins', sans-serif;
+  margin: 0 0 10px;
+}
+
+.boleto-modal-body > div:not(:last-child) {
+  margin-bottom: 22px;
+}
+
+/* Passo 1: quantidade de boletos */
+.qtd-boletos-group {
+  display: flex;
+  gap: 8px;
+}
+
+.qtd-boleto-btn {
+  flex: 1;
+  padding: 10px 8px;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  background: #fff;
+  font-family: 'Poppins', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #555;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+
+.qtd-boleto-btn:hover {
+  border-color: #FF8049;
+}
+
+.qtd-boleto-btn.active {
+  border-color: #FF8049;
+  background: #FF8049;
+  color: #fff;
+}
+
+/* Passo 2: lista de rádio de prazos */
+.prazo-radio-list {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.prazo-radio-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid #f2f2f2;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+  font-size: 16px;
+  color: #333;
+  transition: background 0.15s;
+}
+
+.prazo-radio-item:last-child {
+  border-bottom: none;
+}
+
+.prazo-radio-item:hover {
+  background: #fff8f5;
+}
+
+.radio-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #ccc;
+  flex-shrink: 0;
+  position: relative;
+  transition: border-color 0.2s;
+}
+
+.radio-circle.checked {
+  border-color: #FF8049;
+}
+
+.radio-circle.checked::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #FF8049;
+}
+
+.radio-circle.disabled {
+  opacity: 0.6;
+}
+
+.boleto-modal-footer {
+  padding: 14px 20px 18px;
+  border-top: 1px solid #eee;
+  flex-shrink: 0;
+}
+
+.boleto-resumo {
+  font-size: 12.5px;
+  color: #000;
+  font-weight: 700;
+  font-family: 'Poppins', sans-serif;
+  margin: 0 0 12px;
+  text-align: center;
+}
+
+.boleto-modal-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.boleto-btn-cancelar {
+  flex: 1;
+  height: 42px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background: #fff;
+  color: #666;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.boleto-btn-cancelar:hover {
+  border-color: #999;
+}
+
+.boleto-btn-confirmar {
+  flex: 2;
+  height: 42px;
+  border-radius: 6px;
+  border: none;
+  background: #FF8049;
+  color: #fff;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.boleto-btn-confirmar:hover:not(:disabled) {
+  background: #ce673b;
+}
+
+.boleto-btn-confirmar:disabled {
+  background: #ffb894;
+  cursor: not-allowed;
 }
 
 /* ===== BOTÃO PRIME ===== */

@@ -626,8 +626,7 @@
                   <th>Tipo</th>
                   <th>Un/Emb.</th>
                   <th v-if="cabecalho?.status_cotacao === 'finalizada'">Ação</th>
-                  <th>Cód. Barra - Prod. Equivalente</th>
-                  <th>Descrição - Prod. Equivalente</th>
+                  <th>Observação</th>
                 </tr>
               </thead>
               <tbody>
@@ -715,16 +714,22 @@
                       </button>
                     </td>
 
-                    <!-- Cód. Barra - Prod. Equivalente -->
                     <td>
-                      <b v-if="oferta.codigo_barra">{{ oferta.codigo_barra }}</b>
-                      <b v-else>—</b>
+                        {{ oferta.mensagem || "--" }}
                     </td>
 
-                    <td>
-                      <b v-if="oferta.codigo_barra">{{ oferta.nome_equivalente }}</b>
-                      <b v-else>—</b>
-                    </td>
+                    <!-- Cód. Barra - Prod. Equivalente -->
+                    <!-- 
+                      <td>
+                        <b v-if="oferta.codigo_barra">{{ oferta.codigo_barra }}</b>
+                        <b v-else>—</b>
+                      </td>
+
+                      <td>
+                        <b v-if="oferta.codigo_barra">{{ oferta.nome_equivalente }}</b>
+                        <b v-else>—</b>
+                      </td>
+                    -->
 
                   </tr>
                   
