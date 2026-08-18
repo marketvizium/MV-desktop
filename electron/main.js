@@ -365,7 +365,7 @@ function createWindow () {
     icon: path.join(__dirname, '../build/icon.ico'),
 
     frame: false,
-    devTools: false, //habilitar prod
+    //devTools: false, //habilitar prod
 
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -408,16 +408,16 @@ function createWindow () {
 
         //Bloqueia Ctrl + qualquer tecla
         // Permite apenas alguns atalhos com Ctrl
-        //const atalhosPermitidos = ['a', 'c', 'v', 'x', 'z'];
+        const atalhosPermitidos = ['a', 'c', 'v', 'x', 'z'];
 
-        //if (input.control) {
-        //    if (atalhosPermitidos.includes(input.key.toLowerCase())) {
-        //        return; // Permite Ctrl+A/C/V/X/Z
-        //    }
+        if (input.control) {
+            if (atalhosPermitidos.includes(input.key.toLowerCase())) {
+                return; // Permite Ctrl+A/C/V/X/Z
+            }
 
-        //    event.preventDefault();
-        //    return;
-        //}
+            event.preventDefault();
+            return;
+        }
 
         // Bloqueia Alt + qualquer tecla
         if (input.alt) {
