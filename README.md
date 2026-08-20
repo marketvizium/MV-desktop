@@ -337,3 +337,9 @@ npx cap open android - abrir android studio
 - Prazo de boletos: possibilita definir e visualizar o prazo para pagamento dos boletos.
 - Observações: inclusão de observações adicionais na cotação para fornecer informações importantes aos participantes.
 - Visibilidade para o vendedor: o vendedor consegue visualizar quando está participando de uma cotação e acompanhar novas informações e atualizações disponibilizadas sobre ela.
+
+
+# V217 - Importação e correção de produto não cadastrado
+- Adicionei uma nova funcionalidade de importação para o frontend, e como consequeência disso tive que fazer algumas alterações no backend com relação ao código de barras. Antes se o produto não estava cadastrado, não havia o código de barras do produto e isso se torna inviável para alguns casos específicos, principalmente para os vendedores identificarem o produto depois. Adicionei uma nova coluna para haver o código de barras de um produto não cadastrado. 
+
+- Iniciei a lógica para o novo perfil de adminsitrador do sistema da market vizium

@@ -79,7 +79,7 @@
       </div>
 
       <div class="topbar-right">
-
+        
         <div class="periodo-display" v-if="cabecalho">
           <span class="material-symbols-outlined">calendar_month</span>
 
@@ -90,17 +90,20 @@
           </span>
         </div>
 
-        <!-- ACTIONS baseadas no status -->
+        <!-- Período -->
         <template v-if="cabecalho && auth.user.nivel != 7">
           <button
-            class="action-btn btn-outline btn-header"
-            @click="abrirModalPeriodo"
-            :disabled="estaConcluido"
-          >
-            <span class="material-symbols-outlined">schedule</span>
-            Período
+              class="action-btn btn-outline btn-header"
+              @click="abrirModalPeriodo"
+              :disabled="estaConcluido"
+            >
+              <span class="material-symbols-outlined">schedule</span>
+              Período
           </button>
+        </template>
 
+        <!-- ACTIONS baseadas no status -->
+        <template v-if="cabecalho && auth.user.nivel != 7">
           <button
             class="action-btn btn-primary btn-header"
             v-if="cabecalho.status_cotacao === 'fechada'"
@@ -143,6 +146,7 @@
           Exportar
         </button>
 
+        <!-- Botão tutorial -->
         <button
           class="action-btn btn-export btn-header"
           v-if="cabecalho && auth.user.nivel != 7"
@@ -151,6 +155,16 @@
         >
           <span class="material-symbols-outlined">school</span>
           Ver Tutorial
+        </button>
+
+        <!-- Botão importar -->
+        <button
+          class="action-btn btn-export btn-header"
+          @click="abrirModalImportar"
+          title="Ver Tutorial"
+        >
+          <span class="material-symbols-outlined">add_notes</span>
+          Importar Produtos
         </button>
         
       </div>
@@ -253,7 +267,7 @@
                     <span class="prod-cat" v-if="p.categoria">{{ p.categoria }}</span>
                   </div>
                 </td>
-                <td><span class="mono">{{ p.codigo_barra || "Não cadastrado"}}</span></td>
+                <td><span class="mono">{{ p.codigo_barra || p.codigo_barra_inex ||"Cód. barra não informado"}}</span></td>
                 <td><b>{{ p.quantidade|| "--" }}</b></td>
                 <td>
                   <span class="type-tag" v-if="p.tipo">{{ p.tipo || "--" }}</span>
@@ -1170,6 +1184,10 @@
               <label>Quantidade *</label>
               <input type="number" v-model.number="addProdutoInexistente.quantidade" min="1" class="form-input" />
             </div>
+            <div class="form-group">
+              <label>Código de barra (opcional) </label>
+              <input type="number" v-model.number="addProdutoInexistente.codigo_barra_inex" min="1" class="form-input" />
+            </div>
           </div>
         </div>
         <div class="modal-footer">
@@ -1916,6 +1934,14 @@
       </div>
     </div>
 
+    <MarvizImportarProdutosTxt
+      :visible="modalImportarVisivel"
+      :id-cotacao-local="idCotacaoLocal"
+      :auth="auth"
+      @close="fecharModalImportar"
+      @importado="aoImportarProdutos"
+    />
+
   </div>
 </template>
 
@@ -1927,6 +1953,7 @@ import ProgressSpinner from 'primevue/progressspinner'
 import * as XLSX from 'xlsx'
 import Calendar from 'primevue/calendar'
 import BrDateTimePicker from '@/components/brDateTimePicker.vue';
+import MarvizImportarProdutosTxt from '@/components/MarvizImportarTxt.vue';
 
 
 // ─── Helpers de estilo Excel ────────────────────────────────────────────────
@@ -2009,7 +2036,12 @@ const LS_KEY_MODAL_STATUS = 'modal-tutorial'
 
 export default {
   name: 'CotacaoConsole',
-  components: { ProgressSpinner, Calendar, BrDateTimePicker },
+  components: { 
+    ProgressSpinner,
+    Calendar,
+    BrDateTimePicker,
+    MarvizImportarProdutosTxt
+   },
   props: { id_cotacao: Number },
 
   data() {
@@ -2025,6 +2057,8 @@ export default {
       ofertas: [],
       vendedores: [],
       sugestoes: [],
+
+      modalImportarVisivel: false,
 
       // loading flags
       loadingProdutos: false,
@@ -2073,7 +2107,7 @@ export default {
         tipo: 'unidade',
         qtd_unitaria_composicao: null,
       },
-      addProdutoInexistente: { nome: '', quantidade: null },
+      addProdutoInexistente: { nome: '', quantidade: null, codigo_barra_inex: '', tipo: 'unidade', },
 
       // faturamento extra
       fatExtra: { id_vendedor: '', id_produto: null, nome: '', quantidade: null, tipo: null, preco: null, searchProd: '' },
@@ -2613,10 +2647,23 @@ export default {
       finally { this.loadingAdd = false }
     },
 
+    abrirModalImportar() {
+      this.modalImportarVisivel = true;
+    },
+
+    fecharModalImportar() {
+      this.modalImportarVisivel = false;
+    },
+
+    async aoImportarProdutos() {
+      // disparado quando a importação em lote dá certo
+      await this.carregarProdutos(); // ou o método que você já usa pra recarregar a lista/cotação
+    },
+
     async adicionarProdutoInexistente() {
       try {
         this.loadingAdd = true
-        const payload = [this.addProdutoInexistente.nome, this.addProdutoInexistente.quantidade]
+        const payload = [this.addProdutoInexistente.nome, this.addProdutoInexistente.quantidade, this.addProdutoInexistente.codigo_barra_inex]
         const payloadRequisicao = { codigo_barra: [payload] }
         await api.post(`/mvpu/cotacao/adicionarProdutoInexis/${this.auth.id_loja}/${this.idCotacaoLocal}`, payloadRequisicao)
         this.toast('Produto adicionado!')
@@ -2907,7 +2954,7 @@ export default {
         const bg = idx % 2 === 0 ? WHITE : GRAY
         const vals = [
           p.nome || '—',
-          p.codigo_barra || 'Não cadastrado',
+          p.codigo_barra || p.codigo_barra_inex || 'Cód. barra não informado',
           p.quantidade ?? '—',
           p.tipo || '—',
           p.qtd_unitaria_composicao ? `${p.qtd_unitaria_composicao} un` : '—',
@@ -5170,9 +5217,7 @@ video {
     flex-direction: column;
     gap: 15px;
   }
-}
 
-@media(max-width: 1080px){
   .topbar{
     display: flex;
     flex-direction: column;
@@ -5192,6 +5237,9 @@ video {
     align-items: start;
     width: 100%;
   }
+}
+
+@media(max-width: 1080px){
 
   .btn-header{
     width: 100%;

@@ -414,7 +414,6 @@ function createWindow () {
             if (atalhosPermitidos.includes(input.key.toLowerCase())) {
                 return; // Permite Ctrl+A/C/V/X/Z
             }
-
             event.preventDefault();
             return;
         }
